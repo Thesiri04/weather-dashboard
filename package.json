@@ -1,0 +1,30 @@
+{
+  "name": "weather-dashboard",
+  "version": "1.0.0",
+  "description": "A modern weather dashboard with dynamic backgrounds and historical data storage",
+  "main": "api/index.js",
+  "scripts": {
+    "start": "node api/index.js",
+    "dev": "vercel dev",
+    "build": "echo 'Build complete'",
+    "setup": "chmod +x setup.sh && ./setup.sh",
+    "local": "chmod +x start.sh && ./start.sh",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "mongoose": "^8.18.0",
+    "node-fetch": "^2.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["weather", "dashboard", "vercel", "mongodb", "nodejs", "express", "open-meteo"],
+  "author": "thesiri",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^7.6.0"
+  }
+}
