@@ -1,6 +1,10 @@
 # แดชบอร์ดสภาพอากาศ
-
 แดชบอร์ดสภาพอากาศที่ทันสมัยและรองรับการใช้งานบนอุปกรณ์ต่างๆ ที่แสดงสภาพอากาศปัจจุบัน พยากรณ์อากาศ 7 วัน และเก็บข้อมูลสภาพอากาศในอดีตโดยใช้ Open-Meteo API
+
+
+## Wedsite : https://weather-dashboardrapeesiri.vercel.app/
+
+
 
 ## คุณสมบัติ
 
@@ -18,3 +22,4 @@
 - **Backend**: Node.js, Express.js
 - **ฐานข้อมูล**: MongoDB (Docker container)
 - **Weather API**: Open-Meteo (ฟรี ไม่ต้อง API key)
+
