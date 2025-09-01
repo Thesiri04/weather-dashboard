@@ -763,6 +763,9 @@
                 <button onclick="loadHistory()" style="padding: 8px 15px; background: #74b9ff; color: white; border: none; border-radius: 5px; cursor: pointer;">
                     <i class="fas fa-refresh"></i> Refresh
                 </button>
+                <button id="showMoreBtn" onclick="toggleHistoryView()" style="padding: 8px 15px; background: #6c5ce7; color: white; border: none; border-radius: 5px; cursor: pointer; display: none;">
+                    <i class="fas fa-chevron-down"></i> Show More
+                </button>
             </div>
             <div id="historyContent">
                 <div class="loading">
@@ -779,6 +782,8 @@
         let searchCache = new Map(); // Cache for location searches
         let lastSearchQuery = ''; // Track last search to avoid duplicate requests
         let selectedSuggestionIndex = -1; // For keyboard navigation
+        let showingAllHistory = false; // Track if showing all history or just 5
+        let allHistoryData = []; // Store all history data
 
         // Initialize the app
         document.addEventListener('DOMContentLoaded', function() {
@@ -833,8 +838,14 @@
             // Handle enter key in history search
             document.getElementById('historySearch').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
+                    showingAllHistory = false; // Reset to show only 5 when searching
                     loadHistory();
                 }
+            });
+
+            // Reset history view when search input changes
+            document.getElementById('historySearch').addEventListener('input', function() {
+                showingAllHistory = false; // Reset to show only 5 when searching
             });
         });
 
@@ -1241,9 +1252,11 @@
         async function loadHistory() {
             const historyEl = document.getElementById('historyContent');
             const searchTerm = document.getElementById('historySearch').value.trim();
+            const showMoreBtn = document.getElementById('showMoreBtn');
             
             try {
-                let url = `${API_BASE}/weather/history?limit=10`;
+                // Always fetch all data first
+                let url = `${API_BASE}/weather/history?limit=50`; // Fetch more than 5 to check if there are more
                 if (searchTerm) {
                     url += `&location=${encodeURIComponent(searchTerm)}`;
                 }
@@ -1251,43 +1264,87 @@
                 const response = await fetch(url);
                 const history = await response.json();
                 
+                // Store all data
+                allHistoryData = history;
+                
                 if (history.length === 0) {
                     historyEl.innerHTML = '<div class="loading">No historical data found</div>';
+                    showMoreBtn.style.display = 'none';
                     return;
                 }
 
-                historyEl.innerHTML = history.map(record => `
-                    <div class="history-item">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <strong style="color: #2d3436;">
-                                <i class="fas fa-map-marker-alt"></i> ${record.location.name}
-                            </strong>
-                            <span style="color: #636e72; font-size: 0.9rem;">
-                                ${new Date(record.createdAt).toLocaleString()}
-                            </span>
-                        </div>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px;">
-                            <div>
-                                <i class="fas fa-thermometer-half" style="color: #e17055;"></i>
-                                ${Math.round(record.current.temperature)}°C
-                            </div>
-                            <div>
-                                <i class="fas fa-tint" style="color: #74b9ff;"></i>
-                                ${record.current.humidity}%
-                            </div>
-                            <div>
-                                <i class="fas fa-wind" style="color: #636e72;"></i>
-                                ${record.current.windSpeed} km/h
-                            </div>
-                            <div>
-                                <i class="fas fa-cloud" style="color: #6c5ce7;"></i>
-                                ${record.current.description}
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
+                // Show/hide the "Show More" button based on data length
+                if (history.length > 5) {
+                    showMoreBtn.style.display = 'inline-block';
+                } else {
+                    showMoreBtn.style.display = 'none';
+                }
+
+                // Display history (limit to 5 if not showing all)
+                displayHistory(showingAllHistory ? history : history.slice(0, 5));
+                
+                // Update button text based on current state
+                updateShowMoreButton();
+                
             } catch (error) {
                 historyEl.innerHTML = '<div class="error">Error loading historical data</div>';
+                showMoreBtn.style.display = 'none';
+            }
+        }
+
+        function displayHistory(historyData) {
+            const historyEl = document.getElementById('historyContent');
+            
+            historyEl.innerHTML = historyData.map(record => `
+                <div class="history-item">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <strong style="color: #2d3436;">
+                            <i class="fas fa-map-marker-alt"></i> ${record.location.name}
+                        </strong>
+                        <span style="color: #636e72; font-size: 0.9rem;">
+                            ${new Date(record.createdAt).toLocaleString()}
+                        </span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px;">
+                        <div>
+                            <i class="fas fa-thermometer-half" style="color: #e17055;"></i>
+                            ${Math.round(record.current.temperature)}°C
+                        </div>
+                        <div>
+                            <i class="fas fa-tint" style="color: #74b9ff;"></i>
+                            ${record.current.humidity}%
+                        </div>
+                        <div>
+                            <i class="fas fa-wind" style="color: #636e72;"></i>
+                            ${record.current.windSpeed} km/h
+                        </div>
+                        <div>
+                            <i class="fas fa-cloud" style="color: #6c5ce7;"></i>
+                            ${record.current.description}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleHistoryView() {
+            showingAllHistory = !showingAllHistory;
+            
+            // Display appropriate data
+            displayHistory(showingAllHistory ? allHistoryData : allHistoryData.slice(0, 5));
+            
+            // Update button
+            updateShowMoreButton();
+        }
+
+        function updateShowMoreButton() {
+            const showMoreBtn = document.getElementById('showMoreBtn');
+            const icon = showMoreBtn.querySelector('i');
+            
+            if (showingAllHistory) {
+                showMoreBtn.innerHTML = '<i class="fas fa-chevron-up"></i> Show Less';
+            } else {
+                showMoreBtn.innerHTML = '<i class="fas fa-chevron-down"></i> Show More';
             }
         }
 
