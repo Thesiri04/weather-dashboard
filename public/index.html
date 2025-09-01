@@ -345,6 +345,7 @@
             padding: 20px;
             margin-bottom: 30px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            position: relative;
         }
 
         .search-container {
@@ -354,9 +355,14 @@
             flex-wrap: wrap;
         }
 
-        .search-input {
+        .search-input-container {
             flex: 1;
+            position: relative;
             min-width: 200px;
+        }
+
+        .search-input {
+            width: 100%;
             padding: 12px 15px;
             border: 2px solid #e0e0e0;
             border-radius: 25px;
@@ -393,8 +399,12 @@
                 gap: 15px;
             }
             
-            .search-input {
+            .search-input-container {
                 min-width: unset;
+                width: 100%;
+            }
+            
+            .search-input {
                 width: 100%;
             }
             
@@ -418,6 +428,10 @@
         }
 
         .suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
             max-height: 200px;
             overflow-y: auto;
             background: rgba(255, 255, 255, 0.95);
@@ -427,6 +441,8 @@
             border-radius: 10px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
             display: none;
+            z-index: 1000;
+            margin-top: 5px;
         }
 
         .suggestion {
@@ -704,7 +720,10 @@
 
         <div class="search-section">
             <div class="search-container">
-                <input type="text" class="search-input" id="locationSearch" placeholder="Search for a city or location...">
+                <div class="search-input-container">
+                    <input type="text" class="search-input" id="locationSearch" placeholder="Search for a city or location...">
+                    <div class="suggestions" id="suggestions"></div>
+                </div>
                 <button class="search-btn" onclick="searchWeather()">
                     <i class="fas fa-search"></i> Search
                 </button>
@@ -712,7 +731,6 @@
                     <i class="fas fa-map-marker-alt"></i> Current Location
                 </button>
             </div>
-            <div class="suggestions" id="suggestions"></div>
         </div>
 
         <div class="stats-section" id="statsSection" style="display: none;">
@@ -1353,7 +1371,7 @@
 
         // Hide suggestions when clicking outside
         document.addEventListener('click', function(e) {
-            if (!e.target.closest('.search-section')) {
+            if (!e.target.closest('.search-input-container')) {
                 hideSuggestions();
             }
         });
