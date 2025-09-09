@@ -1475,7 +1475,11 @@
             const data = sensorData.sensorData;
             const location = sensorData.location;
             
-            const timeAgo = getTimeAgo(new Date(data.timestamp));
+            const timeAgo = getTimeAgo(data.timestamp);
+            const timestamp = new Date(data.timestamp);
+            const timestampDisplay = isNaN(timestamp.getTime()) ? 
+                'Invalid timestamp' : 
+                timestamp.toLocaleString();
             
             sensorGrid.innerHTML = `
                 <div class="sensor-card">
@@ -1504,7 +1508,7 @@
                         <i class="fas fa-map-marker-alt"></i> ${location.name}
                     </div>
                     <div class="sensor-timestamp">
-                        ${new Date(data.timestamp).toLocaleString()}
+                        ${timestampDisplay}
                     </div>
                 </div>
             `;
@@ -1512,7 +1516,24 @@
 
         function getTimeAgo(date) {
             const now = new Date();
-            const diffInSeconds = Math.floor((now - date) / 1000);
+            const timestamp = new Date(date);
+            
+            // Check if the date is valid
+            if (isNaN(timestamp.getTime())) {
+                return 'Invalid timestamp';
+            }
+            
+            // Check if the date is too far in the past (likely invalid)
+            if (timestamp.getFullYear() < 2000) {
+                return 'Invalid timestamp';
+            }
+            
+            const diffInSeconds = Math.floor((now - timestamp) / 1000);
+            
+            // Handle future dates (clock sync issues)
+            if (diffInSeconds < 0) {
+                return 'Just now';
+            }
             
             if (diffInSeconds < 60) {
                 return `${diffInSeconds} seconds ago`;

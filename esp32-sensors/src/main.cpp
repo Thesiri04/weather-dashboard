@@ -1,6 +1,8 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include <time.h>
+#include <DHT.h>
 
 // WiFi credentials
 const char* ssid = "Jessica13";         // ⬅️ Your WiFi network name
@@ -10,9 +12,17 @@ const char* password = "Thesiri01";  // ⬅️ Your WiFi password
 const char* serverURL = "https://weather-dashboardrapeesiri.vercel.app/api"; // ✅ Your Vercel URL
 const unsigned long uploadInterval = 60000; // Upload every 60 seconds
 
-// Temperature and Humidity sensor configuration
-#define TEMP_SENSOR_PIN 9    // Temperature sensor on GPIO 9
-#define HUMIDITY_SENSOR_PIN 2 // Humidity sensor on GPIO 2
+// NTP configuration
+const char* ntpServer = "pool.ntp.org";
+const long gmtOffset_sec = 7 * 3600;     // GMT+7 (Thailand timezone)
+const int daylightOffset_sec = 0;        // Thailand doesn't use daylight saving time
+
+// Asair Temperature and Humidity sensor configuration
+#define DHT_PIN 2          // Asair sensor connected to GPIO 2
+#define DHT_TYPE DHT11     // DHT11 - Asair sensor type
+
+// Initialize DHT sensor
+DHT dht(DHT_PIN, DHT_TYPE);
 
 // Timing variables
 unsigned long lastUpload = 0;
@@ -21,12 +31,10 @@ void setup() {
   Serial.begin(115200);
   Serial.println("=== ESP32 Weather Sensor Starting ===");
   
-  // Initialize analog sensor pins
-  pinMode(TEMP_SENSOR_PIN, INPUT);
-  pinMode(HUMIDITY_SENSOR_PIN, INPUT);
-  Serial.println("Temperature and Humidity sensors initialized");
-  Serial.printf("Temperature sensor on GPIO %d\n", TEMP_SENSOR_PIN);
-  Serial.printf("Humidity sensor on GPIO %d\n", HUMIDITY_SENSOR_PIN);
+  // Initialize Asair DHT sensor
+  dht.begin();
+  Serial.println("Asair DHT11 Temperature and Humidity sensor initialized");
+  Serial.printf("DHT11 sensor connected to GPIO %d\n", DHT_PIN);
   
   // Connect to WiFi
   WiFi.begin(ssid, password);
@@ -43,6 +51,32 @@ void setup() {
   Serial.println(WiFi.localIP());
   Serial.print("Server URL: ");
   Serial.println(serverURL);
+  
+  // Initialize and get the time
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  Serial.println("Time synchronization started...");
+  
+  // Wait for time to be set (up to 10 seconds)
+  int retries = 0;
+  struct tm timeinfo;
+  while (!getLocalTime(&timeinfo) && retries < 20) {
+    delay(500);
+    retries++;
+    Serial.print(".");
+  }
+  
+  if (retries >= 20) {
+    Serial.println("\nFailed to obtain time - will use relative timestamps");
+  } else {
+    Serial.println("\nTime synchronized successfully!");
+    Serial.print("Thailand time (GMT+7): ");
+    Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+    
+    // Print the actual Unix timestamp for debugging
+    time_t now;
+    time(&now);
+    Serial.printf("Unix timestamp: %lu\n", now);
+  }
 }
 
 void loop() {
@@ -59,20 +93,23 @@ void loop() {
 }
 
 void readAndUploadSensorData() {
-  Serial.println("\n=== Reading Sensor Data ===");
+  Serial.println("\n=== Reading Asair DHT11 Sensor Data ===");
   
-  // Read analog values from sensors
-  int tempReading = analogRead(TEMP_SENSOR_PIN);
-  int humidityReading = analogRead(HUMIDITY_SENSOR_PIN);
+  // Read temperature and humidity from DHT sensor
+  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature();
   
-  // Convert analog readings to actual values
-  // Adjust these formulas based on your specific sensors
-  float temperature = convertToTemperature(tempReading);
-  float humidity = convertToHumidity(humidityReading);
+  // Check if any reads failed and exit early (to try again)
+  if (isnan(humidity) || isnan(temperature)) {
+    Serial.println("❌ Failed to read from Asair DHT11 sensor!");
+    return;
+  }
   
-  // Display readings
-  Serial.printf("Temperature reading: %d (%.2f°C)\n", tempReading, temperature);
-  Serial.printf("Humidity reading: %d (%.2f%%)\n", humidityReading, humidity);
+  // Display readings clearly
+  Serial.println("--- ASAIR DHT11 SENSOR VALUES ---");
+  Serial.printf("🌡️  Temperature: %.1f°C\n", temperature);  // DHT11 has 1°C resolution
+  Serial.printf("💧 Humidity: %.0f%%\n", humidity);         // DHT11 has 1% resolution
+  Serial.println("--------------------------------");
   
   // Send data to server
   if (WiFi.status() == WL_CONNECTED) {
@@ -84,22 +121,15 @@ void readAndUploadSensorData() {
   }
 }
 
-// Convert analog reading to temperature (adjust for your sensor)
-float convertToTemperature(int reading) {
-  // Example conversion for common temperature sensors
-  // Adjust this formula based on your specific sensor datasheet
-  float voltage = reading * (3.3 / 4095.0); // ESP32 ADC: 12-bit (0-4095)
-  float temperature = (voltage - 0.5) * 100; // Example: LM35 or similar
-  return temperature;
-}
-
-// Convert analog reading to humidity (adjust for your sensor)
-float convertToHumidity(int reading) {
-  // Example conversion for humidity sensors
-  // Adjust this formula based on your specific sensor datasheet
-  float voltage = reading * (3.3 / 4095.0);
-  float humidity = (voltage / 3.3) * 100; // Simple linear conversion
-  return constrain(humidity, 0, 100); // Ensure humidity is 0-100%
+// Get current Unix timestamp
+unsigned long getCurrentTimestamp() {
+  time_t now;
+  time(&now);
+  if (now < 1000000000) { // If time is not properly set (before year 2001)
+    // Return current time in seconds since boot as fallback
+    return millis() / 1000;
+  }
+  return now;
 }
 
 void sendDataToServer(float temperature, float humidity) {
@@ -115,7 +145,7 @@ void sendDataToServer(float temperature, float humidity) {
   doc["location"]["longitude"] = 0.0;
   doc["sensorData"]["temperature"] = temperature;
   doc["sensorData"]["humidity"] = humidity;
-  doc["sensorData"]["timestamp"] = WiFi.getTime();
+  // Let the server set the timestamp to ensure accuracy
   doc["sensorData"]["source"] = "ESP32";
   
   String jsonString;

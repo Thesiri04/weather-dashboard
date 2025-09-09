@@ -289,7 +289,7 @@ app.post('/api/sensors/data', async (req, res) => {
             sensorData: {
                 temperature: sensorData.temperature,
                 humidity: sensorData.humidity,
-                timestamp: new Date(sensorData.timestamp) || new Date(),
+                timestamp: new Date(), // Always use current server time
                 source: sensorData.source || 'ESP32'
             }
         });
