@@ -225,8 +225,132 @@ app.get('/api/weather/stats', async (req, res) => {
     }
 });
 
+// ESP32 Sensor data schema
+const sensorSchema = new mongoose.Schema({
+    deviceId: String,
+    location: {
+        name: String,
+        latitude: Number,
+        longitude: Number,
+    },
+    sensorData: {
+        temperature: Number,
+        humidity: Number,
+        timestamp: { type: Date, default: Date.now },
+        source: { type: String, default: 'ESP32' }
+    },
+    createdAt: { type: Date, default: Date.now }
+});
+
+const SensorData = mongoose.model('SensorData', sensorSchema);
+
+// Receive sensor data from ESP32
+app.post('/api/sensors/data', async (req, res) => {
+    try {
+        const { deviceId, location, sensorData } = req.body;
+        
+        console.log('Received sensor data from ESP32:', req.body);
+        
+        const newSensorData = new SensorData({
+            deviceId: deviceId || 'Unknown-ESP32',
+            location: {
+                name: location?.name || 'ESP32 Sensor',
+                latitude: location?.latitude || 0,
+                longitude: location?.longitude || 0
+            },
+            sensorData: {
+                temperature: sensorData.temperature,
+                humidity: sensorData.humidity,
+                timestamp: new Date(sensorData.timestamp) || new Date(),
+                source: sensorData.source || 'ESP32'
+            }
+        });
+        
+        await newSensorData.save();
+        
+        res.status(200).json({ 
+            success: true, 
+            message: 'Sensor data saved successfully',
+            data: newSensorData
+        });
+        
+        console.log('✅ ESP32 sensor data saved to MongoDB');
+        
+    } catch (error) {
+        console.error('Error saving sensor data:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to save sensor data' 
+        });
+    }
+});
+
+// Get latest sensor data
+app.get('/api/sensors/latest', async (req, res) => {
+    try {
+        const { deviceId } = req.query;
+        
+        let query = {};
+        if (deviceId) {
+            query.deviceId = deviceId;
+        }
+        
+        const latestData = await SensorData.findOne(query)
+            .sort({ createdAt: -1 });
+            
+        if (!latestData) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'No sensor data found' 
+            });
+        }
+        
+        res.json({
+            success: true,
+            data: latestData
+        });
+        
+    } catch (error) {
+        console.error('Error fetching latest sensor data:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to fetch sensor data' 
+        });
+    }
+});
+
+// Get sensor data history
+app.get('/api/sensors/history', async (req, res) => {
+    try {
+        const { deviceId, limit = 20 } = req.query;
+        
+        let query = {};
+        if (deviceId) {
+            query.deviceId = deviceId;
+        }
+        
+        const sensorHistory = await SensorData.find(query)
+            .sort({ createdAt: -1 })
+            .limit(parseInt(limit));
+            
+        res.json({
+            success: true,
+            data: sensorHistory,
+            count: sensorHistory.length
+        });
+        
+    } catch (error) {
+        console.error('Error fetching sensor history:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to fetch sensor history' 
+        });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
+    console.log(`Ready to receive ESP32 sensor data at /api/sensors/data`);
 });
 
 module.exports = app;
