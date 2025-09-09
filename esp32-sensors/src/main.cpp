@@ -4,6 +4,14 @@
 #include <time.h>
 #include <DHT.h>
 
+
+// Upload this code via Arduino IDE to ESP32 board
+// Make sure to install the required libraries via Library Manager:
+// - DHT sensor library
+// - Arduino JSON library
+// - WiFi library (included with ESP32 board package)
+
+
 // WiFi credentials
 const char* ssid = "Jessica13";         // ⬅️ Your WiFi network name
 const char* password = "Thesiri01";  // ⬅️ Your WiFi password
@@ -159,7 +167,7 @@ void sendDataToServer(float temperature, float humidity) {
   
   // Create JSON payload
   StaticJsonDocument<200> doc;
-  doc["deviceId"] = "ESP32-DHT22-001";
+  doc["deviceId"] = "ESP32-DHT11-001";
   doc["location"]["name"] = "ESP32 Sensor";
   doc["location"]["latitude"] = 0.0;  // Set your actual coordinates
   doc["location"]["longitude"] = 0.0;
