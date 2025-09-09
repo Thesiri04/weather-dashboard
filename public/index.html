@@ -1484,7 +1484,7 @@
             sensorGrid.innerHTML = `
                 <div class="sensor-card">
                     <div class="sensor-label">
-                        <i class="fas fa-thermometer-half"></i> Temperature
+                        <i class="fas fa-thermometer-half"></i> Temperature (DHT11)
                     </div>
                     <div class="sensor-value sensor-temp">
                         ${data.temperature.toFixed(1)}°C
@@ -1495,19 +1495,25 @@
                     <div class="sensor-timestamp">
                         Updated ${timeAgo}
                     </div>
+                    <div class="sensor-timestamp" style="font-size: 0.75em; margin-top: 5px;">
+                        ${timestampDisplay}
+                    </div>
                 </div>
                 
                 <div class="sensor-card">
                     <div class="sensor-label">
-                        <i class="fas fa-tint"></i> Humidity
+                        <i class="fas fa-tint"></i> Humidity (DHT11)
                     </div>
                     <div class="sensor-value sensor-humidity">
                         ${data.humidity.toFixed(1)}%
                     </div>
                     <div class="sensor-device">
-                        <i class="fas fa-map-marker-alt"></i> ${location.name}
+                        <i class="fas fa-microchip"></i> ${sensorData.deviceId}
                     </div>
                     <div class="sensor-timestamp">
+                        Updated ${timeAgo}
+                    </div>
+                    <div class="sensor-timestamp" style="font-size: 0.75em; margin-top: 5px;">
                         ${timestampDisplay}
                     </div>
                 </div>

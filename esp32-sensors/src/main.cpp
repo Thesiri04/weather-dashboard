@@ -36,6 +36,10 @@ void setup() {
   Serial.println("Asair DHT11 Temperature and Humidity sensor initialized");
   Serial.printf("DHT11 sensor connected to GPIO %d\n", DHT_PIN);
   
+  // Give DHT11 time to stabilize (important for reliable readings)
+  Serial.println("Waiting for DHT11 to stabilize...");
+  delay(2000);
+  
   // Connect to WiFi
   WiFi.begin(ssid, password);
   Serial.print("Connecting to WiFi");
@@ -95,13 +99,29 @@ void loop() {
 void readAndUploadSensorData() {
   Serial.println("\n=== Reading Asair DHT11 Sensor Data ===");
   
-  // Read temperature and humidity from DHT sensor
-  float humidity = dht.readHumidity();
-  float temperature = dht.readTemperature();
+  // Try to read sensor data with retries
+  float humidity = NAN;
+  float temperature = NAN;
+  int retryCount = 0;
+  const int maxRetries = 3;
   
-  // Check if any reads failed and exit early (to try again)
+  while (retryCount < maxRetries && (isnan(humidity) || isnan(temperature))) {
+    if (retryCount > 0) {
+      Serial.printf("Retry attempt %d/%d...\n", retryCount, maxRetries - 1);
+      delay(2000); // Wait 2 seconds between retries for DHT11
+    }
+    
+    // Read temperature and humidity from DHT sensor
+    humidity = dht.readHumidity();
+    temperature = dht.readTemperature();
+    
+    retryCount++;
+  }
+  
+  // Check if reading was successful after retries
   if (isnan(humidity) || isnan(temperature)) {
-    Serial.println("❌ Failed to read from Asair DHT11 sensor!");
+    Serial.printf("❌ Failed to read from Asair DHT11 sensor after %d attempts!\n", maxRetries);
+    Serial.println("   Check wiring and sensor connections.");
     return;
   }
   
