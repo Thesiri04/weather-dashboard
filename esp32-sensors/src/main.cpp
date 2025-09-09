@@ -3,11 +3,11 @@
 #include <ArduinoJson.h>
 
 // WiFi credentials
-const char* ssid = "Jessica13";         // ⬅️ CHANGE THIS
-const char* password = "Thesiri01";  // ⬅️ CHANGE THIS
+const char* ssid = "Jessica13";         // ⬅️ Your WiFi network name
+const char* password = "Thesiri01";  // ⬅️ Your WiFi password
 
 // Server configuration for Vercel deployment
-const char* serverURL = "https://your-vercel-app.vercel.app/api"; // ⬅️ CHANGE TO YOUR VERCEL URL
+const char* serverURL = "https://weather-dashboardrapeesiri.vercel.app/api"; // ✅ Your Vercel URL
 const unsigned long uploadInterval = 60000; // Upload every 60 seconds
 
 // Temperature and Humidity sensor configuration

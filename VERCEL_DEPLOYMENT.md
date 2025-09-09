@@ -49,7 +49,7 @@ Your ESP32 will send data to your Vercel URL instead of localhost:
 ### Update main.cpp:
 ```cpp
 // Replace with your actual Vercel URL
-const char* serverURL = "https://your-app-name.vercel.app/api";
+const char* serverURL = "https://weather-dashboardrapeesiri.vercel.app/api";
 ```
 
 ## 🌐 Step 4: How Data Travels
@@ -138,12 +138,12 @@ vercel --prod
 
 ### 2. Get your Vercel URL:
 ```
-https://weather-dashboard-abc123.vercel.app
+https://weather-dashboardrapeesiri.vercel.app
 ```
 
 ### 3. Update ESP32 serverURL:
 ```cpp
-const char* serverURL = "https://weather-dashboard-abc123.vercel.app/api";
+const char* serverURL = "https://weather-dashboardrapeesiri.vercel.app/api";
 ```
 
 ### 4. Upload ESP32 code and test!
