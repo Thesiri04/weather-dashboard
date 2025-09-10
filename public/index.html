@@ -93,7 +93,7 @@
 
         .container {
             position: relative;
-            z-index: 10000;
+            z-index: 10;
         }
 
         /* Sun animation */
@@ -359,7 +359,7 @@
             flex: 1;
             position: relative;
             min-width: 200px;
-            z-index: 1000;
+            z-index: auto;
         }
 
         .search-input {
@@ -429,7 +429,7 @@
         }
 
         .suggestions {
-            position: fixed;
+            position: absolute;
             max-height: 200px;
             overflow-y: auto;
             background: rgba(255, 255, 255, 0.95);
@@ -439,7 +439,7 @@
             border-radius: 10px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
             display: none;
-            z-index: 999999;
+            z-index: 999999 !important;
             margin-top: 5px;
         }
 
@@ -793,7 +793,6 @@
             <div class="search-container">
                 <div class="search-input-container">
                     <input type="text" class="search-input" id="locationSearch" placeholder="Search for a city or location...">
-                    <div class="suggestions" id="suggestions"></div>
                 </div>
                 <button class="search-btn" onclick="searchWeather()">
                     <i class="fas fa-search"></i> Search
@@ -802,6 +801,8 @@
                     <i class="fas fa-map-marker-alt"></i> Current Location
                 </button>
             </div>
+            <!-- Move suggestions outside but position it relative to input -->
+            <div class="suggestions" id="suggestions"></div>
         </div>
 
         <div class="stats-section" id="statsSection" style="display: none;">
@@ -981,14 +982,13 @@
                 return;
             }
 
-            // Calculate position relative to the input field
+            // Position the suggestions relative to the input field
             const inputRect = inputEl.getBoundingClientRect();
-            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+            const searchSection = document.querySelector('.search-section').getBoundingClientRect();
             
-            // Position the dropdown below the input
-            suggestionsEl.style.top = (inputRect.bottom + scrollTop + 5) + 'px';
-            suggestionsEl.style.left = (inputRect.left + scrollLeft) + 'px';
+            // Calculate position relative to search-section
+            suggestionsEl.style.top = (inputRect.bottom - searchSection.top + 5) + 'px';
+            suggestionsEl.style.left = (inputRect.left - searchSection.left) + 'px';
             suggestionsEl.style.width = inputRect.width + 'px';
 
             suggestionsEl.innerHTML = locations.map((location, index) => 
@@ -1645,25 +1645,6 @@
         }
 
         // Hide suggestions when clicking outside
-        // Handle window scroll and resize to reposition dropdown
-        function repositionSuggestions() {
-            const suggestionsEl = document.getElementById('suggestions');
-            const inputEl = document.getElementById('locationSearch');
-            
-            if (suggestionsEl.style.display === 'block') {
-                const inputRect = inputEl.getBoundingClientRect();
-                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-                const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-                
-                suggestionsEl.style.top = (inputRect.bottom + scrollTop + 5) + 'px';
-                suggestionsEl.style.left = (inputRect.left + scrollLeft) + 'px';
-                suggestionsEl.style.width = inputRect.width + 'px';
-            }
-        }
-        
-        window.addEventListener('scroll', repositionSuggestions);
-        window.addEventListener('resize', repositionSuggestions);
-
         // Hide suggestions when clicking outside
         document.addEventListener('click', function(e) {
             if (!e.target.closest('.search-input-container')) {
