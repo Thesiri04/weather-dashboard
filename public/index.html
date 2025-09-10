@@ -429,10 +429,7 @@
         }
 
         .suggestions {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
+            position: fixed;
             max-height: 200px;
             overflow-y: auto;
             background: rgba(255, 255, 255, 0.95);
@@ -442,7 +439,7 @@
             border-radius: 10px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
             display: none;
-            z-index: 9999;
+            z-index: 999999;
             margin-top: 5px;
         }
 
@@ -977,11 +974,22 @@
 
         function showSuggestions(locations) {
             const suggestionsEl = document.getElementById('suggestions');
+            const inputEl = document.getElementById('locationSearch');
             
             if (locations.length === 0) {
                 hideSuggestions();
                 return;
             }
+
+            // Calculate position relative to the input field
+            const inputRect = inputEl.getBoundingClientRect();
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+            
+            // Position the dropdown below the input
+            suggestionsEl.style.top = (inputRect.bottom + scrollTop + 5) + 'px';
+            suggestionsEl.style.left = (inputRect.left + scrollLeft) + 'px';
+            suggestionsEl.style.width = inputRect.width + 'px';
 
             suggestionsEl.innerHTML = locations.map((location, index) => 
                 `<div class="suggestion" data-index="${index}" onclick="selectLocation('${location.latitude}', '${location.longitude}', '${location.displayName}')">
@@ -1635,6 +1643,26 @@
                 return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
             }
         }
+
+        // Hide suggestions when clicking outside
+        // Handle window scroll and resize to reposition dropdown
+        function repositionSuggestions() {
+            const suggestionsEl = document.getElementById('suggestions');
+            const inputEl = document.getElementById('locationSearch');
+            
+            if (suggestionsEl.style.display === 'block') {
+                const inputRect = inputEl.getBoundingClientRect();
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+                
+                suggestionsEl.style.top = (inputRect.bottom + scrollTop + 5) + 'px';
+                suggestionsEl.style.left = (inputRect.left + scrollLeft) + 'px';
+                suggestionsEl.style.width = inputRect.width + 'px';
+            }
+        }
+        
+        window.addEventListener('scroll', repositionSuggestions);
+        window.addEventListener('resize', repositionSuggestions);
 
         // Hide suggestions when clicking outside
         document.addEventListener('click', function(e) {
