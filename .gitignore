@@ -59,3 +59,49 @@ temp/
 
 # Vercel
 .vercel
+
+# ESP32 Project Files
+esp32-project/build/
+esp32-project/sdkconfig.old
+esp32-project/sdkconfig.h
+esp32-project/.vscode/
+esp32-project/.devcontainer/
+esp32-project/managed_components/
+esp32-project/dependencies.lock
+
+# ESP-IDF Generated Files
+*.bin
+*.elf
+*.map
+*_args
+flasher_args.json
+project_description.json
+compile_commands.json
+config.env
+partition_table/
+bootloader/
+x509_crt_bundle.S
+
+# ESP-IDF Build Artifacts
+esp32-project/build/**/*
+!esp32-project/build/.gitkeep
+
+# PlatformIO Files (from esp32-sensors)
+esp32-sensors/
+.pio/
+.pioenvs/
+.piolibdeps/
+lib_deps_external/
+
+# Additional ESP-IDF ignores
+esp32-sensors-idf/build/
+esp32-sensors-idf/sdkconfig.old
+esp32-sensors-idf/managed_components/
+
+# Build and compiled files
+**/*.o
+**/*.a
+**/*.so
+**/*.elf
+**/*.bin
+**/*.map
