@@ -777,6 +777,98 @@
             color: #999;
             margin-top: 5px;
         }
+
+        /* ESP32 Sensor History Styles */
+        .sensor-history-section {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .sensor-history-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #2d3436;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sensor-history-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .sensor-history-item {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 15px;
+            align-items: center;
+            transition: transform 0.3s;
+        }
+
+        .sensor-history-item:hover {
+            transform: translateY(-2px);
+        }
+
+        .sensor-history-temp {
+            text-align: center;
+        }
+
+        .sensor-history-humidity {
+            text-align: center;
+        }
+
+        .sensor-history-info {
+            text-align: center;
+        }
+
+        .sensor-history-time {
+            font-size: 0.9rem;
+            color: #6c5ce7;
+            font-weight: 500;
+        }
+
+        .sensor-value-small {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+
+        .sensor-temp-small {
+            color: #e17055;
+        }
+
+        .sensor-humidity-small {
+            color: #74b9ff;
+        }
+
+        .sensor-label-small {
+            font-size: 0.9rem;
+            color: #636e72;
+        }
+
+        @media (max-width: 768px) {
+            .sensor-history-item {
+                grid-template-columns: 1fr;
+                text-align: center;
+                gap: 10px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -839,6 +931,27 @@
             </div>
         </div>
 
+        <!-- ESP32 Sensor History Section -->
+        <div class="sensor-history-section">
+            <div class="sensor-history-title">
+                <i class="fas fa-chart-line"></i> ESP32 Sensor History
+            </div>
+            <div class="sensor-history-controls">
+                <button onclick="loadSensorHistory()" style="padding: 8px 15px; background: #00b894; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    <i class="fas fa-refresh"></i> Refresh
+                </button>
+                <button id="showMoreSensorBtn" onclick="toggleSensorHistoryView()" style="padding: 8px 15px; background: #e17055; color: white; border: none; border-radius: 5px; cursor: pointer; display: none;">
+                    <i class="fas fa-chevron-down"></i> Show More
+                </button>
+            </div>
+            <div id="sensorHistoryContent">
+                <div class="loading">
+                    <i class="fas fa-microchip"></i>
+                    <p>Loading ESP32 sensor history...</p>
+                </div>
+            </div>
+        </div>
+
         <div class="history-section">
             <div class="history-title">
                 <i class="fas fa-history"></i> Historical Data
@@ -870,11 +983,16 @@
         let showingAllHistory = false; // Track if showing all history or just 5
         let allHistoryData = []; // Store all history data
 
+        // ESP32 Sensor History variables
+        let showingAllSensorHistory = false; // Track if showing all sensor history or just 5
+        let allSensorHistoryData = []; // Store all sensor history data
+
         // Initialize the app
         document.addEventListener('DOMContentLoaded', function() {
             loadHistory();
             loadStats();
             loadLatestSensorData(); // Load ESP32 sensor data
+            loadSensorHistory(); // Load ESP32 sensor history
             
             // Refresh sensor data every 30 seconds
             setInterval(loadLatestSensorData, 30000);
@@ -1455,6 +1573,8 @@
                 
                 if (result.success && result.data) {
                     displaySensorData(result.data);
+                    // Also refresh sensor history to include new data
+                    loadSensorHistory();
                 } else {
                     console.log('No ESP32 sensor data available');
                     // Keep the section visible with "waiting" message
@@ -1564,6 +1684,104 @@
                 const days = Math.floor(diffInSeconds / 86400);
                 return `${days} day${days !== 1 ? 's' : ''} ago`;
             }
+        }
+
+        // ESP32 Sensor History Functions
+        async function loadSensorHistory() {
+            try {
+                const response = await fetch(`${API_BASE}/sensors/history?limit=20`);
+                const result = await response.json();
+                
+                if (result.success && result.data && result.data.length > 0) {
+                    allSensorHistoryData = result.data;
+                    displaySensorHistory();
+                } else {
+                    document.getElementById('sensorHistoryContent').innerHTML = `
+                        <div class="loading">
+                            <i class="fas fa-info-circle"></i>
+                            <p>No ESP32 sensor history available</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading sensor history:', error);
+                document.getElementById('sensorHistoryContent').innerHTML = `
+                    <div class="loading">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Error loading sensor history</p>
+                    </div>
+                `;
+            }
+        }
+
+        function displaySensorHistory() {
+            const container = document.getElementById('sensorHistoryContent');
+            const showMoreBtn = document.getElementById('showMoreSensorBtn');
+            
+            // Determine how many items to show
+            const itemsToShow = showingAllSensorHistory ? allSensorHistoryData : allSensorHistoryData.slice(0, 5);
+            
+            if (itemsToShow.length === 0) {
+                container.innerHTML = `
+                    <div class="loading">
+                        <i class="fas fa-info-circle"></i>
+                        <p>No sensor data available</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = itemsToShow.map(record => {
+                const timeAgo = getTimeAgo(record.sensorData.timestamp);
+                const fullTime = new Date(record.sensorData.timestamp).toLocaleString();
+                
+                return `
+                    <div class="sensor-history-item">
+                        <div class="sensor-history-temp">
+                            <div class="sensor-label-small">🌡️ Temperature</div>
+                            <div class="sensor-value-small sensor-temp-small">
+                                ${record.sensorData.temperature.toFixed(1)}°C
+                            </div>
+                        </div>
+                        <div class="sensor-history-humidity">
+                            <div class="sensor-label-small">💧 Humidity</div>
+                            <div class="sensor-value-small sensor-humidity-small">
+                                ${record.sensorData.humidity.toFixed(1)}%
+                            </div>
+                        </div>
+                        <div class="sensor-history-info">
+                            <div class="sensor-label-small">📟 Device</div>
+                            <div style="font-size: 0.9rem; color: #6c5ce7; font-weight: 500;">
+                                ${record.deviceId}
+                            </div>
+                            <div style="font-size: 0.8rem; color: #999; margin-top: 2px;">
+                                ${timeAgo}
+                            </div>
+                        </div>
+                        <div class="sensor-history-time">
+                            <div class="sensor-label-small">⏰ Time</div>
+                            <div style="font-size: 0.85rem; color: #2d3436;">
+                                ${fullTime}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Show/hide the "Show More" button
+            if (allSensorHistoryData.length > 5) {
+                showMoreBtn.style.display = 'block';
+                showMoreBtn.innerHTML = showingAllSensorHistory 
+                    ? '<i class="fas fa-chevron-up"></i> Show Less'
+                    : '<i class="fas fa-chevron-down"></i> Show More';
+            } else {
+                showMoreBtn.style.display = 'none';
+            }
+        }
+
+        function toggleSensorHistoryView() {
+            showingAllSensorHistory = !showingAllSensorHistory;
+            displaySensorHistory();
         }
 
         async function loadStats() {
