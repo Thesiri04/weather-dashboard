@@ -25,9 +25,23 @@
 #define WIFI_PASS "Thesiri01"
 
 // Server Configuration  
-#define SERVER_URL "https://weather-dashboardrapeesiri.vercel.app/api/sensors/data"
+#define SERVER_URL_VERCEL "https://weather-dashboardrapeesiri.vercel.app/api/sensors/data"
+#define SERVER_URL_LOCAL "http://172.20.10.4:5000/api/sensors/data"  // Jessica13 network IP for Docker access
 #define MAX_HTTP_RECV_BUFFER 512
 #define MAX_HTTP_OUTPUT_BUFFER 2048
+
+/*
+ * IMPORTANT: Before uploading to ESP32, you MUST replace YOUR_LOCAL_IP with your actual local IP address
+ * To find your local IP:
+ * - Windows: ipconfig (look for IPv4 Address)
+ * - macOS/Linux: ifconfig or ip addr
+ * - Make sure your ESP32 and computer are on the same network
+ * - Example: "http://192.168.1.100:5000/api/sensors/data"
+ * 
+ * Also ensure your local backend is running:
+ * - Run: docker-compose up -d
+ * - Backend should be available on port 5000
+ */
 
 // DHT11 Configuration
 #define DHT11_PIN GPIO_NUM_4
@@ -57,6 +71,7 @@ static void wifi_init_sta(void);
 static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
 static dht11_data_t read_dht11(void);
 static esp_err_t http_event_handler(esp_http_client_event_t *evt);
+static bool send_data_to_endpoint(const char* url, float temperature, float humidity, const char* endpoint_name);
 static void send_sensor_data(float temperature, float humidity);
 static void sensor_task(void *pvParameters);
 static void time_sync_notification_cb(struct timeval *tv);
@@ -288,10 +303,13 @@ static esp_err_t http_event_handler(esp_http_client_event_t *evt)
     return ESP_OK;
 }
 
-// Send Sensor Data to Server
-static void send_sensor_data(float temperature, float humidity)
+// Send Sensor Data to Single Endpoint
+static bool send_data_to_endpoint(const char* url, float temperature, float humidity, const char* endpoint_name)
 {
     char local_response_buffer[MAX_HTTP_OUTPUT_BUFFER] = {0};
+    bool success = false;
+    
+    ESP_LOGI(TAG, "📤 Sending data to %s: %s", endpoint_name, url);
     
     // Create JSON payload
     cJSON *json = cJSON_CreateObject();
@@ -316,15 +334,14 @@ static void send_sensor_data(float temperature, float humidity)
     cJSON_AddItemToObject(json, "sensorData", sensor_data);
     
     char *json_string = cJSON_Print(json);
-    ESP_LOGI(TAG, "Sending data to server:");
-    ESP_LOGI(TAG, "%s", json_string);
     
     // Configure HTTP client
     esp_http_client_config_t config = {
-        .url = SERVER_URL,
+        .url = url,
         .event_handler = http_event_handler,
         .user_data = local_response_buffer,
         .disable_auto_redirect = true,
+        .timeout_ms = 10000,  // 10 second timeout
     };
     
     esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -335,20 +352,62 @@ static void send_sensor_data(float temperature, float humidity)
     esp_err_t err = esp_http_client_perform(client);
     if (err == ESP_OK) {
         int status_code = esp_http_client_get_status_code(client);
-        int content_length = esp_http_client_get_content_length(client);
-        ESP_LOGI(TAG, "Server response code: %d", status_code);
-        ESP_LOGI(TAG, "Server response: %s", local_response_buffer);
+        ESP_LOGI(TAG, "📊 %s response code: %d", endpoint_name, status_code);
         
         if (status_code == 200) {
-            ESP_LOGI(TAG, "✅ Data uploaded successfully!");
+            ESP_LOGI(TAG, "✅ %s: Data uploaded successfully!", endpoint_name);
+            success = true;
+        } else {
+            ESP_LOGW(TAG, "⚠️  %s: Server returned status %d", endpoint_name, status_code);
+        }
+        
+        if (strlen(local_response_buffer) > 0) {
+            ESP_LOGD(TAG, "%s response: %s", endpoint_name, local_response_buffer);
         }
     } else {
-        ESP_LOGE(TAG, "❌ Error sending data: %s", esp_err_to_name(err));
+        ESP_LOGE(TAG, "❌ %s: Connection error: %s", endpoint_name, esp_err_to_name(err));
     }
     
     esp_http_client_cleanup(client);
     free(json_string);
     cJSON_Delete(json);
+    
+    return success;
+}
+
+// Send Sensor Data to Multiple Servers
+static void send_sensor_data(float temperature, float humidity)
+{
+    ESP_LOGI(TAG, "🚀 Starting dual-destination data upload...");
+    ESP_LOGI(TAG, "📊 Sensor data: Temperature=%.1f°C, Humidity=%.0f%%", temperature, humidity);
+    
+    bool vercel_success = false;
+    bool local_success = false;
+    
+    // Send to Vercel (MongoDB Atlas)
+    ESP_LOGI(TAG, "\n--- Sending to Vercel (MongoDB Atlas) ---");
+    vercel_success = send_data_to_endpoint(SERVER_URL_VERCEL, temperature, humidity, "Vercel/Atlas");
+    
+    // Small delay between requests
+    vTaskDelay(pdMS_TO_TICKS(500));
+    
+    // Send to Local Backend (Local MongoDB)
+    ESP_LOGI(TAG, "\n--- Sending to Local Backend (Local MongoDB) ---");
+    local_success = send_data_to_endpoint(SERVER_URL_LOCAL, temperature, humidity, "Local/Docker");
+    
+    // Summary report
+    ESP_LOGI(TAG, "\n=== UPLOAD SUMMARY ===");
+    ESP_LOGI(TAG, "📤 Vercel/Atlas:  %s", vercel_success ? "✅ SUCCESS" : "❌ FAILED");
+    ESP_LOGI(TAG, "📤 Local/Docker:  %s", local_success ? "✅ SUCCESS" : "❌ FAILED");
+    
+    if (vercel_success && local_success) {
+        ESP_LOGI(TAG, "🎉 ALL destinations uploaded successfully!");
+    } else if (vercel_success || local_success) {
+        ESP_LOGI(TAG, "⚠️  Partial success - at least one destination working");
+    } else {
+        ESP_LOGE(TAG, "💥 ALL uploads failed - check network and server status");
+    }
+    ESP_LOGI(TAG, "=====================\n");
 }
 
 // Main Sensor Task

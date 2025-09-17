@@ -1,0 +1,28 @@
+# Prometheus Configuration for Weather Dashboard Monitoring
+global:
+  scrape_interval: 15s # Set the scrape interval to every 15 seconds
+  evaluation_interval: 15s # Evaluate rules every 15 seconds
+
+# Scrape configuration for monitoring targets
+scrape_configs:
+  # MongoDB monitoring via mongodb-exporter
+  - job_name: 'mongodb-exporter'
+    static_configs:
+      # Use internal Docker network IP address
+      - targets: ['172.21.0.3:9216']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    
+  # ESP32 Sensor Data from Local Backend
+  - job_name: 'esp32-sensors'
+    static_configs:
+      # Local backend metrics endpoint
+      - targets: ['172.21.0.4:5000']
+    scrape_interval: 15s
+    metrics_path: /metrics
+    
+  # Prometheus itself monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 15s

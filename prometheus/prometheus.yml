@@ -1,0 +1,30 @@
+# Prometheus Configuration for Weather Dashboard Monitoring
+global:
+  scrape_interval: 15s # Set the scrape interval to every 15 seconds
+  evaluation_interval: 15s # Evaluate rules every 15 seconds
+
+# Scrape configuration for monitoring targets
+scrape_configs:
+  # MongoDB Atlas monitoring via mongodb-exporter
+  - job_name: 'mongodb-atlas'
+    static_configs:
+      - targets: ['mongodb-exporter:9216']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    
+  # Prometheus itself monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 15s
+
+# Rule files for alerting (optional - can be added later)
+# rule_files:
+#   - "weather_alerts.yml"
+
+# Alertmanager configuration (optional - can be added later)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - alertmanager:9093

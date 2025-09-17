@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  grafana:
+    image: grafana/grafana:latest
+    container_name: weather-grafana
+    restart: unless-stopped
+    ports:
+      - "3001:3000"  # Use port 3001 to avoid conflict with frontend
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin123}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - weather-network
+
+networks:
+  weather-network:
+    external: true  # Use existing network from main docker-compose
+
+volumes:
+  grafana_data:

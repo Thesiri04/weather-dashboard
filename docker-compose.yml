@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   mongodb:
     image: mongo:latest
@@ -14,6 +12,41 @@ services:
     networks:
       - weather-network
 
+  mongodb-exporter:
+    image: bitnami/mongodb-exporter:latest
+    container_name: weather-mongodb-exporter
+    restart: unless-stopped
+    ports:
+      - "9216:9216"
+    environment:
+      - MONGODB_URI=mongodb://weather-mongodb:27017/weatherdb
+    command: ["mongodb_exporter", "--mongodb.uri=mongodb://weather-mongodb:27017/weatherdb", "--collect.dbstats", "--collect.topmetrics", "--collect.indexstats", "--collect.collstats"]
+    depends_on:
+      - mongodb
+    networks:
+      - weather-network
+
+  local-backend:
+    image: node:18-alpine
+    container_name: weather-local-backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./local-backend.js:/app/local-backend.js
+      - ./package.json:/app/package.json
+    working_dir: /app
+    command: sh -c "npm install && node local-backend.js"
+    depends_on:
+      - mongodb
+    environment:
+      - NODE_ENV=development
+    networks:
+      - weather-network
+
 networks:
   weather-network:
     driver: bridge
+
+volumes:
+  grafana_data:
